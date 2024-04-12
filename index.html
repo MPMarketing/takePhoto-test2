@@ -196,7 +196,6 @@
         document.addEventListener('DOMContentLoaded', async () => {
             await initCamera();
             canvasContext = faceCanvas.getContext('2d');
-            displaySize = { width: video.videoWidth, height: video.videoHeight };
             faceDrawInterval = startFaceMapping();
 
             captureBtn.addEventListener('click', capturePhoto);
