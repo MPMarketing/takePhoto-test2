@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Capture</title>
+    <!-- Adicionando a biblioteca Face-API.js -->
+    <script src="caminho/para/face-api.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #video {
+            width: 100%;
+            max-width: 400px;
+            border: 2px solid black;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        #capture-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #loading,
+        #success-msg {
+            display: none;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        #message-top {
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Elementos para a câmera e feedback -->
+    <video id="video" autoplay playsinline></video>
+    <button id="capture-btn">Capturar Foto</button>
+    <div id="loading">Carregando...</div>
+    <div id="success-msg">Foto capturada com sucesso!</div>
+    <div id="message-top">Fique com o rosto reto</div>
+
+    <!-- Scripts JavaScript -->
+    <script>
+        const video = document.getElementById('video');
+        const captureBtn = document.getElementById('capture-btn');
+        const loadingMsg = document.getElementById('loading');
+        const successMsg = document.getElementById('success-msg');
+        const messageTop = document.getElementById('message-top');
+        let canvas;
+        let canvasContext;
+        let faceDrawInterval;
+        let displaySize;
+        let currentStep = 0;
+        let photosTaken = 0;
+
+        // Função para inicializar a câmera
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error('Erro ao acessar a câmera:', err);
+            }
+        }
+
+        // Função para inicializar o canvas
+        function initCanvas() {
+            canvas = document.createElement('canvas');
+            document.body.appendChild(canvas);
+            canvasContext = canvas.getContext('2d');
+        }
+
+        // Função para iniciar o mapeamento facial
+        async function startFaceMapping() {
+            const faceDetectionOptions = new faceapi.TinyFaceDetectorOptions();
+            await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
+            await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
+            await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
+            await faceapi.nets.faceExpressionNet.loadFromUri('/models');
+
+            const intervalId = setInterval(async () => {
+                const detections = await faceapi.detectAllFaces(video, faceDetectionOptions)
+                    .withFaceLandmarks()
+                    .withFaceExpressions();
+
+                const resizedDetections = faceapi.resizeResults(detections, { width: video.videoWidth, height: video.videoHeight });
+
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+
+                faceapi.draw.drawDetections(canvas, resizedDetections);
+                faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+                faceapi.draw.drawFaceExpressions(canvas, resizedDetections);
+
+            }, 100);
+
+            return intervalId;
+        }
+
+        // Função para capturar uma foto
+        async function capturePhoto() {
+            loadingMsg.style.display = 'block';
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = video.videoWidth;
+            tempCanvas.height = video.videoHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+
+            const dataURL = tempCanvas.toDataURL();
+            const photo = new Image();
+            photo.src = dataURL;
+
+            successMsg.style.display = 'none';
+
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            loadingMsg.style.display = 'none';
+            successMsg.style.display = 'block';
+
+            photosTaken++;
+            currentStep++;
+
+            showMessage();
+
+            if (photosTaken < 3) {
+                setTimeout(startNewCapture, 2000);
+            } else {
+                setTimeout(() => {
+                    // Redirecionar para outra página após a terceira foto
+                    window.open('https://www.google.com', '_blank');
+                }, 1000); // Aguarda 1 segundo após a terceira foto antes de redirecionar
+            }
+        }
+
+        // Função para reiniciar a captura
+        function startNewCapture() {
+            video.play();
+            successMsg.style.display = 'none';
+            startFaceMapping();
+        }
+
+        // Função para mostrar as mensagens de orientação
+        function showMessage() {
+            switch (currentStep) {
+                case 0:
+                    messageTop.innerText = 'Fique com o rosto reto';
+                    break;
+                case 1:
+                    messageTop.innerText = 'Vire seu rosto levemente para algum dos lados';
+                    break;
+                case 2:
+                    messageTop.innerText = 'Agora faça o mesmo no sentido contrário';
+                    break;
+                default:
+                    messageTop.innerText = '';
+            }
+        }
+
+        // Função principal para iniciar a aplicação
+        async function main() {
+            await initCamera();
+            initCanvas();
+            startFaceMapping();
+
+            // Adicionar um evento de click para iniciar a captura de foto
+            captureBtn.addEventListener('click', capturePhoto);
+
+            // Adicionar um evento de click para iniciar a reprodução do vídeo (para o Safari)
+            video.addEventListener('click', () => {
+                if (video.paused) {
+                    video.play();
+                }
+            });
+        }
+
+        // Executar a função principal ao carregar o DOM
+        document.addEventListener('DOMContentLoaded', main);
+    </script>
+</body>
+</html>
