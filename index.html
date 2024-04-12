@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Camera Capture</title>
     <!-- Adicionando a biblioteca Face-API.js -->
-    <script src="caminho/para/face-api.min.js"></script>
+    <script src="face-api.min.js"></script>
     <style>
         body {
             display: flex;
@@ -15,6 +15,7 @@
             height: 100vh;
             margin: 0;
             font-family: Arial, sans-serif;
+            position: relative;
         }
 
         #video {
@@ -23,6 +24,7 @@
             border: 2px solid black;
             border-radius: 8px;
             margin-bottom: 20px;
+            position: relative;
         }
 
         #capture-btn {
@@ -33,6 +35,11 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
         }
 
         #loading,
@@ -45,12 +52,27 @@
         #message-top {
             font-size: 20px;
             margin-bottom: 20px;
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+        }
+
+        #face-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+            width: 100%; /* Definindo a largura do canvas igual à largura do vídeo */
+            height: 100%; /* Definindo a altura do canvas igual à altura do vídeo */
         }
     </style>
 </head>
 <body>
     <!-- Elementos para a câmera e feedback -->
     <video id="video" autoplay playsinline></video>
+    <canvas id="face-canvas"></canvas>
     <button id="capture-btn">Capturar Foto</button>
     <div id="loading">Carregando...</div>
     <div id="success-msg">Foto capturada com sucesso!</div>
@@ -63,12 +85,12 @@
         const loadingMsg = document.getElementById('loading');
         const successMsg = document.getElementById('success-msg');
         const messageTop = document.getElementById('message-top');
-        let canvas;
+        const faceCanvas = document.getElementById('face-canvas');
         let canvasContext;
-        let faceDrawInterval;
         let displaySize;
         let currentStep = 0;
         let photosTaken = 0;
+        let faceDrawInterval;
 
         // Função para inicializar a câmera
         async function initCamera() {
@@ -78,13 +100,6 @@
             } catch (err) {
                 console.error('Erro ao acessar a câmera:', err);
             }
-        }
-
-        // Função para inicializar o canvas
-        function initCanvas() {
-            canvas = document.createElement('canvas');
-            document.body.appendChild(canvas);
-            canvasContext = canvas.getContext('2d');
         }
 
         // Função para iniciar o mapeamento facial
@@ -100,15 +115,17 @@
                     .withFaceLandmarks()
                     .withFaceExpressions();
 
-                const resizedDetections = faceapi.resizeResults(detections, { width: video.videoWidth, height: video.videoHeight });
+                if (detections.length > 0) {
+                    const resizedDetections = faceapi.resizeResults(detections, { width: video.videoWidth, height: video.videoHeight });
 
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+                    faceCanvas.width = video.videoWidth;
+                    faceCanvas.height = video.videoHeight;
+                    canvasContext.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
 
-                faceapi.draw.drawDetections(canvas, resizedDetections);
-                faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
-                faceapi.draw.drawFaceExpressions(canvas, resizedDetections);
+                    faceapi.draw.drawDetections(faceCanvas, resizedDetections);
+                    faceapi.draw.drawFaceLandmarks(faceCanvas, resizedDetections);
+                    faceapi.draw.drawFaceExpressions(faceCanvas, resizedDetections);
+                }
 
             }, 100);
 
@@ -151,11 +168,11 @@
             }
         }
 
-        // Função para reiniciar a captura
+        // Função para iniciar uma nova captura
         function startNewCapture() {
             video.play();
             successMsg.style.display = 'none';
-            startFaceMapping();
+            faceDrawInterval = startFaceMapping();
         }
 
         // Função para mostrar as mensagens de orientação
@@ -175,25 +192,15 @@
             }
         }
 
-        // Função principal para iniciar a aplicação
-        async function main() {
+        // Iniciar a aplicação ao carregar o DOM
+        document.addEventListener('DOMContentLoaded', async () => {
             await initCamera();
-            initCanvas();
-            startFaceMapping();
+            canvasContext = faceCanvas.getContext('2d');
+            displaySize = { width: video.videoWidth, height: video.videoHeight };
+            faceDrawInterval = startFaceMapping();
 
-            // Adicionar um evento de click para iniciar a captura de foto
             captureBtn.addEventListener('click', capturePhoto);
-
-            // Adicionar um evento de click para iniciar a reprodução do vídeo (para o Safari)
-            video.addEventListener('click', () => {
-                if (video.paused) {
-                    video.play();
-                }
-            });
-        }
-
-        // Executar a função principal ao carregar o DOM
-        document.addEventListener('DOMContentLoaded', main);
+        });
     </script>
 </body>
 </html>
