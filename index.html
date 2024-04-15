@@ -19,9 +19,10 @@
         }
 
         #video-container {
+            position: relative;
             width: 100%;
             max-width: 400px;
-            position: relative;
+            margin-bottom: 20px;
         }
 
         #video {
@@ -29,6 +30,20 @@
             height: auto; /* Altura ajustada automaticamente */
             border: 2px solid black;
             border-radius: 8px;
+            /* transform: scaleX(-1); Espelha horizontalmente o vídeo */
+        }
+
+        #notification-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: none;
+            z-index: 2;
         }
 
         #capture-btn {
@@ -39,14 +54,6 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            margin-top: 20px;
-        }
-
-        #loading,
-        #success-msg {
-            display: none;
-            margin-top: 20px;
-            font-size: 18px;
         }
 
         #message-top {
@@ -58,9 +65,10 @@
             position: absolute;
             top: 0;
             left: 0;
-            z-index: 0;
+            z-index: 1;
             width: 100%; /* Largura do canvas igual à largura do vídeo */
             height: 100%; /* Altura do canvas igual à altura do vídeo */
+            /* transform: scaleX(-1); Espelha horizontalmente o vídeo */
         }
     </style>
 </head>
@@ -69,22 +77,19 @@
     <div id="video-container">
         <video id="video" autoplay playsinline></video>
         <canvas id="face-canvas"></canvas>
+        <div id="notification-overlay">Loading...</div>
     </div>
     <button id="capture-btn">Capturar Foto</button>
-    <div id="loading">Carregando...</div>
-    <div id="success-msg">Foto capturada com sucesso!</div>
     <div id="message-top">Fique com o rosto reto</div>
 
     <!-- Scripts JavaScript -->
     <script>
         const video = document.getElementById('video');
         const captureBtn = document.getElementById('capture-btn');
-        const loadingMsg = document.getElementById('loading');
-        const successMsg = document.getElementById('success-msg');
+        const notificationOverlay = document.getElementById('notification-overlay');
         const messageTop = document.getElementById('message-top');
         const faceCanvas = document.getElementById('face-canvas');
         let canvasContext;
-        let displaySize;
         let currentStep = 0;
         let photosTaken = 0;
         let faceDrawInterval;
@@ -131,34 +136,25 @@
 
         // Função para capturar uma foto
         async function capturePhoto() {
-            loadingMsg.style.display = 'block';
-
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = video.videoWidth;
-            tempCanvas.height = video.videoHeight;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-
-            const dataURL = tempCanvas.toDataURL();
-            const photo = new Image();
-            photo.src = dataURL;
-
-            successMsg.style.display = 'none';
+            notificationOverlay.innerText = 'Capturando...';
+            notificationOverlay.style.display = 'block';
 
             await new Promise(resolve => setTimeout(resolve, 1000));
 
-            loadingMsg.style.display = 'none';
-            successMsg.style.display = 'block';
-
+            notificationOverlay.innerText = 'Foto capturada com sucesso!';
             photosTaken++;
             currentStep++;
 
             showMessage();
 
             if (photosTaken < 3) {
-                setTimeout(startNewCapture, 2000);
+                setTimeout(() => {
+                    notificationOverlay.style.display = 'none';
+                    startNewCapture();
+                }, 2000);
             } else {
                 setTimeout(() => {
+                    notificationOverlay.style.display = 'none';
                     // Redirecionar para outra página após a terceira foto
                     window.open('https://www.google.com', '_blank');
                 }, 1000); // Aguarda 1 segundo após a terceira foto antes de redirecionar
@@ -168,7 +164,6 @@
         // Função para iniciar uma nova captura
         function startNewCapture() {
             video.play();
-            successMsg.style.display = 'none';
             faceDrawInterval = startFaceMapping();
         }
 
@@ -176,13 +171,13 @@
         function showMessage() {
             switch (currentStep) {
                 case 0:
-                    messageTop.innerText = 'Fique com o rosto reto';
+                    messageTop.innerText = 'Fique com o rosto reto e com expressão neutra';
                     break;
                 case 1:
-                    messageTop.innerText = 'Vire seu rosto levemente para algum dos lados';
+                    messageTop.innerText = 'Agora faça uma foto sorrindo, estas marcas são importantes';
                     break;
                 case 2:
-                    messageTop.innerText = 'Agora faça o mesmo no sentido contrário';
+                    messageTop.innerText = 'E por último, vire o rosto levemente para qualquer um dos lados';
                     break;
                 default:
                     messageTop.innerText = '';
@@ -193,7 +188,7 @@
         document.addEventListener('DOMContentLoaded', async () => {
             await initCamera();
             canvasContext = faceCanvas.getContext('2d');
-            faceDrawInterval = startFaceMapping();
+            startNewCapture();
 
             captureBtn.addEventListener('click', capturePhoto);
         });
