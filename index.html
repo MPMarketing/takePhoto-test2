@@ -44,6 +44,7 @@
             border-radius: 5px;
             display: none;
             z-index: 2;
+            text-align: center;
         }
 
         #capture-btn {
@@ -79,7 +80,7 @@
         <canvas id="face-canvas"></canvas>
         <div id="notification-overlay">Loading...</div>
     </div>
-    <button id="capture-btn">Capturar Foto</button>
+    <button id="capture-btn">Capture</button>
     <div id="message-top">Fique com o rosto reto</div>
 
     <!-- Scripts JavaScript -->
@@ -136,12 +137,12 @@
 
         // Função para capturar uma foto
         async function capturePhoto() {
-            notificationOverlay.innerText = 'Capturando...';
+            notificationOverlay.innerText = 'Capturing...';
             notificationOverlay.style.display = 'block';
 
             await new Promise(resolve => setTimeout(resolve, 1000));
 
-            notificationOverlay.innerText = 'Foto capturada com sucesso!';
+            notificationOverlay.innerText = 'Successfully captured!';
             photosTaken++;
             currentStep++;
 
@@ -171,13 +172,13 @@
         function showMessage() {
             switch (currentStep) {
                 case 0:
-                    messageTop.innerText = 'Fique com o rosto reto e com expressão neutra';
+                    messageTop.innerText = 'Keep your face straight and with a neutral expression';
                     break;
                 case 1:
-                    messageTop.innerText = 'Agora faça uma foto sorrindo, estas marcas são importantes';
+                    messageTop.innerText = 'Now take a photo smiling, these marks are important';
                     break;
                 case 2:
-                    messageTop.innerText = 'E por último, vire o rosto levemente para qualquer um dos lados';
+                    messageTop.innerText = 'And finally, turn your face slightly to either side';
                     break;
                 default:
                     messageTop.innerText = '';
